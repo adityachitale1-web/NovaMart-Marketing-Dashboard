@@ -103,13 +103,6 @@ st.sidebar.markdown("""
     <p style='color:#4a5568; font-size:13px; margin-top:2px;'>
         Marketing Analytics Dashboard
     </p>
-    <p style='font-size:12px; margin-top:6px;'>
-        <a href="https://github.com/mercydeez/novamart-marketing-dashboard" 
-           target="_blank" 
-           style="color:#3182ce; text-decoration:none;">
-            View project on GitHub ↗
-        </a>
-    </p>
 </div>
 """, unsafe_allow_html=True)
 
