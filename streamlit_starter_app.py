@@ -597,7 +597,7 @@ st.markdown("""
     <p>Masters of AI in Business - Data Visualization Assignment</p>
     <p style='font-size:15px; margin-top:10px;'>
         Created by 
-        <a href="https://github.com/mercydeez" target="_blank" style="color:#1f77b4; text-decoration:none;">
+        <a href="https://github.com/adityachitale1-web" target="_blank" style="color:#1f77b4; text-decoration:none;">
             <b>Aditya Chitale</b>
         </a>
     </p>
