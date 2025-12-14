@@ -1,27 +1,16 @@
-"""
-NovaMart Marketing Analytics Dashboard - Starter Template
-=========================================================
-Masters of AI in Business - Data Visualization Assignment
-
-This starter template provides the basic structure for your Streamlit dashboard.
-Complete the TODO sections to build your visualizations.
-
-To run: streamlit run app.py
-"""
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from sklearn.metrics import confusion_matrix, roc_curve, auc
+import numpy as np
+from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
+import os
 
-# =============================================================================
-# PAGE CONFIG
-# =============================================================================
+# Page configuration
 st.set_page_config(
     page_title="NovaMart Marketing Analytics",
     page_icon="📊",
@@ -29,546 +18,595 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# =============================================================================
-# DATA LOADING (with caching)
-# =============================================================================
+# Custom CSS
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .sub-header {
+        font-size: 1.2rem;
+        color: #666;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        color: white;
+    }
+    .insight-box {
+        background-color: #e8f1ff;  /* stronger contrast than plain white */
+        padding: 1rem 1.2rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #1f77b4;
+        margin: 1rem 0;
+        color: #1f2933;            /* darker text for readability */
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
+        font-size: 0.95rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Cache data loading
 @st.cache_data
 def load_data():
-    """Load all datasets"""
-    data = {}
-    
-    # Update these paths to match your data location
-    data_path = "data/"  # Change this to your data folder path
-    
+    """Load all datasets with error handling"""
     try:
-        data['campaigns'] = pd.read_csv(f"{data_path}campaign_performance.csv", parse_dates=['date'])
-        data['customers'] = pd.read_csv(f"{data_path}customer_data.csv")
-        data['products'] = pd.read_csv(f"{data_path}product_sales.csv")
-        data['leads'] = pd.read_csv(f"{data_path}lead_scoring_results.csv")
-        data['feature_importance'] = pd.read_csv(f"{data_path}feature_importance.csv")
-        data['learning_curve'] = pd.read_csv(f"{data_path}learning_curve.csv")
-        data['geographic'] = pd.read_csv(f"{data_path}geographic_data.csv")
-        data['attribution'] = pd.read_csv(f"{data_path}channel_attribution.csv")
-        data['funnel'] = pd.read_csv(f"{data_path}funnel_data.csv")
-        data['journey'] = pd.read_csv(f"{data_path}customer_journey.csv")
-        data['correlation'] = pd.read_csv(f"{data_path}correlation_matrix.csv", index_col=0)
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        campaign = pd.read_csv(os.path.join(BASE_DIR, 'data', 'campaign_performance.csv'))
+        campaign['date'] = pd.to_datetime(campaign['date'])
         
-        return data
-    except FileNotFoundError as e:
-        st.error(f"Data file not found: {e}")
-        st.info("Please ensure all CSV files are in the 'data/' folder")
+        customer = pd.read_csv(os.path.join(BASE_DIR, 'data', 'customer_data.csv'))
+        product = pd.read_csv(os.path.join(BASE_DIR, 'data', 'product_sales.csv'))
+        lead_scoring = pd.read_csv(os.path.join(BASE_DIR, 'data', 'lead_scoring_results.csv'))
+        feature_importance = pd.read_csv(os.path.join(BASE_DIR, 'data', 'feature_importance.csv'))
+        learning_curve = pd.read_csv(os.path.join(BASE_DIR, 'data', 'learning_curve.csv'))
+        geographic = pd.read_csv(os.path.join(BASE_DIR, 'data', 'geographic_data.csv'))
+        attribution = pd.read_csv(os.path.join(BASE_DIR, 'data', 'channel_attribution.csv'))
+        funnel = pd.read_csv(os.path.join(BASE_DIR, 'data', 'funnel_data.csv'))
+        journey = pd.read_csv(os.path.join(BASE_DIR, 'data', 'customer_journey.csv'))
+        correlation = pd.read_csv(os.path.join(BASE_DIR, 'data', 'correlation_matrix.csv'))
+        
+        return {
+            'campaign': campaign,
+            'customer': customer,
+            'product': product,
+            'lead_scoring': lead_scoring,
+            'feature_importance': feature_importance,
+            'learning_curve': learning_curve,
+            'geographic': geographic,
+            'attribution': attribution,
+            'funnel': funnel,
+            'journey': journey,
+            'correlation': correlation
+        }
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
         return None
 
-# =============================================================================
-# SIDEBAR NAVIGATION
-# =============================================================================
-def sidebar():
-    """Create sidebar navigation"""
-    st.sidebar.title("📊 NovaMart Analytics")
-    st.sidebar.markdown("---")
-    
-    page = st.sidebar.radio(
-        "Navigate to:",
-        [
-            "🏠 Executive Overview",
-            "📈 Campaign Analytics",
-            "👥 Customer Insights",
-            "📦 Product Performance",
-            "🗺️ Geographic Analysis",
-            "🎯 Attribution & Funnel",
-            "🤖 ML Model Evaluation"
-        ]
-    )
-    
-    st.sidebar.markdown("---")
-    st.sidebar.info("Masters of AI in Business\nData Visualization Assignment")
-    
-    return page
+# Load data
+data = load_data()
 
-# =============================================================================
-# PAGE: EXECUTIVE OVERVIEW
-# =============================================================================
-def page_executive_overview(data):
-    """Executive Overview Dashboard"""
-    st.title("🏠 Executive Overview")
-    st.markdown("Key performance metrics at a glance")
+if data is None:
+    st.stop()
+
+# Sidebar (updated – no image, clean header + link)
+st.sidebar.markdown("""
+<div style='text-align:center; padding:10px 0;'>
+    <h2 style='color:#1f77b4; margin-bottom:0;'>NovaMart</h2>
+    <p style='color:#4a5568; font-size:13px; margin-top:2px;'>
+        Marketing Analytics Dashboard
+    </p>
+    <p style='font-size:12px; margin-top:6px;'>
+        <a href="https://github.com/mercydeez/novamart-marketing-dashboard" 
+           target="_blank" 
+           style="color:#3182ce; text-decoration:none;">
+            View project on GitHub ↗
+        </a>
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown("### 🎯 Dashboard Controls")
+
+# Date filter
+date_range = st.sidebar.date_input(
+    "Select Date Range",
+    value=(data['campaign']['date'].min(), data['campaign']['date'].max()),
+    min_value=data['campaign']['date'].min(),
+    max_value=data['campaign']['date'].max()
+)
+
+# Region filter
+regions = ['All'] + list(data['campaign']['region'].unique())
+selected_region = st.sidebar.selectbox("Select Region", regions)
+
+# Channel filter
+channels = ['All'] + list(data['campaign']['channel'].unique())
+selected_channel = st.sidebar.selectbox("Select Channel", channels)
+
+# Apply filters
+filtered_campaign = data['campaign'].copy()
+if selected_region != 'All':
+    filtered_campaign = filtered_campaign[filtered_campaign['region'] == selected_region]
+if selected_channel != 'All':
+    filtered_campaign = filtered_campaign[filtered_campaign['channel'] == selected_channel]
+
+# Main header
+st.markdown('<p class="main-header">📊 NovaMart Marketing Analytics Dashboard</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Comprehensive Marketing Performance & Customer Intelligence Platform</p>', unsafe_allow_html=True)
+
+# Key Metrics
+col1, col2, col3, col4, col5 = st.columns(5)
+with col1:
+    st.metric("Total Revenue", f"₹{filtered_campaign['revenue'].sum()/1e6:.2f}M", 
+              f"{filtered_campaign['revenue'].sum()/data['campaign']['revenue'].sum()*100:.1f}%")
+with col2:
+    st.metric("Total Conversions", f"{filtered_campaign['conversions'].sum():,}", 
+              f"{filtered_campaign['conversion_rate'].mean():.2f}% CVR")
+with col3:
+    st.metric("Total Spend", f"₹{filtered_campaign['spend'].sum()/1e6:.2f}M",
+              f"{filtered_campaign['roas'].mean():.2f}x ROAS")
+with col4:
+    st.metric("Avg CTR", f"{filtered_campaign['ctr'].mean():.2f}%",
+              f"↑ {(filtered_campaign['ctr'].mean() - 2.5):.2f}%")
+with col5:
+    st.metric("Active Customers", f"{len(data['customer']):,}",
+              f"{(1-data['customer']['is_churned'].mean())*100:.1f}% Retention")
+
+st.markdown("---")
+
+# Create tabs
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📈 Campaign Performance", 
+    "👥 Customer Analytics", 
+    "🛍️ Product Insights",
+    "🤖 ML Models",
+    "🗺️ Geographic Analysis",
+    "🔄 Attribution & Funnel"
+])
+
+# TAB 1: CAMPAIGN PERFORMANCE
+with tab1:
+    st.header("📈 Campaign Performance Analysis")
     
-    campaigns = data['campaigns']
-    customers = data['customers']
-    
-    # KPI Cards
-    col1, col2, col3, col4 = st.columns(4)
+    # Revenue by Channel - Bar Chart
+    col1, col2 = st.columns(2)
     
     with col1:
-        total_revenue = campaigns['revenue'].sum()
-        st.metric("Total Revenue", f"₹{total_revenue/1e7:.2f} Cr")
+        st.subheader("Revenue by Channel")
+        channel_revenue = filtered_campaign.groupby('channel')['revenue'].sum().reset_index()
+        channel_revenue = channel_revenue.sort_values('revenue', ascending=False)
+        fig = px.bar(channel_revenue, x='channel', y='revenue', 
+                     color='revenue', color_continuous_scale='Blues',
+                     labels={'revenue': 'Revenue (₹)', 'channel': 'Marketing Channel'})
+        fig.update_layout(showlegend=False, height=400)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        st.markdown(f"""
+        <div class="insight-box">
+        <b>💡 Insight:</b> {channel_revenue.iloc[0]['channel']} is the top-performing channel 
+        with ₹{channel_revenue.iloc[0]['revenue']/1e6:.2f}M in revenue.
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        total_conversions = campaigns['conversions'].sum()
-        st.metric("Total Conversions", f"{total_conversions:,}")
+        st.subheader("Revenue by Campaign Type")
+        type_revenue = filtered_campaign.groupby('campaign_type')['revenue'].sum().reset_index()
+        fig = px.bar(type_revenue, x='campaign_type', y='revenue',
+                     color='campaign_type', color_discrete_sequence=px.colors.qualitative.Set2)
+        fig.update_layout(showlegend=False, height=400)
+        st.plotly_chart(fig, use_container_width=True)
     
-    with col3:
-        avg_roas = campaigns[campaigns['roas'] > 0]['roas'].mean()
-        st.metric("Avg ROAS", f"{avg_roas:.2f}x")
-    
-    with col4:
-        total_customers = len(customers)
-        st.metric("Total Customers", f"{total_customers:,}")
-    
-    st.markdown("---")
-    
-    # TODO: Add Line Chart - Revenue Trend
-    st.subheader("📈 Revenue Trend Over Time")
-    
-    # Aggregate by month
-    monthly_revenue = campaigns.groupby(pd.Grouper(key='date', freq='M'))['revenue'].sum().reset_index()
-    
-    fig = px.line(
-        monthly_revenue, 
-        x='date', 
-        y='revenue',
-        title='Monthly Revenue Trend',
-        labels={'date': 'Month', 'revenue': 'Revenue (₹)'}
-    )
-    fig.update_layout(hovermode='x unified')
+    # Grouped Bar Chart - Region x Quarter
+    st.subheader("Regional Performance by Quarter")
+    region_quarter = filtered_campaign.groupby(['region', 'quarter'])['revenue'].sum().reset_index()
+    fig = px.bar(region_quarter, x='region', y='revenue', color='quarter',
+                 barmode='group', color_discrete_sequence=px.colors.qualitative.Pastel)
+    fig.update_layout(height=400)
     st.plotly_chart(fig, use_container_width=True)
     
-    # TODO: Add Bar Chart - Channel Performance
-    st.subheader("📊 Revenue by Channel")
+    # Line Chart - Daily Revenue Trend
+    st.subheader("Daily Revenue Trend")
+    daily_revenue = filtered_campaign.groupby('date')['revenue'].sum().reset_index()
+    fig = px.line(daily_revenue, x='date', y='revenue', 
+                  labels={'revenue': 'Revenue (₹)', 'date': 'Date'})
+    fig.update_traces(line_color='#1f77b4', line_width=2)
+    fig.update_layout(height=400, hovermode='x unified')
+    st.plotly_chart(fig, use_container_width=True)
     
-    channel_revenue = campaigns.groupby('channel')['revenue'].sum().sort_values(ascending=True).reset_index()
+    # Area Chart - Conversions by Channel over Time
+    st.subheader("Conversions by Channel Over Time")
+    channel_time = filtered_campaign.groupby(['date', 'channel'])['conversions'].sum().reset_index()
+    fig = px.area(channel_time, x='date', y='conversions', color='channel',
+                  color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(height=400, hovermode='x unified')
+    st.plotly_chart(fig, use_container_width=True)
     
-    fig = px.bar(
-        channel_revenue,
-        x='revenue',
-        y='channel',
-        orientation='h',
-        title='Total Revenue by Marketing Channel',
-        labels={'revenue': 'Revenue (₹)', 'channel': 'Channel'}
-    )
+    # Stacked Bar - Monthly Spend by Campaign Type
+    st.subheader("Monthly Spend by Campaign Type")
+    monthly_spend = filtered_campaign.groupby(['month', 'campaign_type'])['spend'].sum().reset_index()
+    month_order = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    monthly_spend['month'] = pd.Categorical(monthly_spend['month'], categories=month_order, ordered=True)
+    monthly_spend = monthly_spend.sort_values('month')
+    fig = px.bar(monthly_spend, x='month', y='spend', color='campaign_type',
+                 barmode='stack', color_discrete_sequence=px.colors.qualitative.Bold)
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Bubble Chart - CTR vs Conversion Rate vs Spend
+    st.subheader("Campaign Efficiency: CTR vs Conversion Rate (Bubble Size = Spend)")
+    campaign_agg = filtered_campaign.groupby('campaign_type').agg({
+        'ctr': 'mean',
+        'conversion_rate': 'mean',
+        'spend': 'sum',
+        'roas': 'mean'
+    }).reset_index()
+    fig = px.scatter(campaign_agg, x='ctr', y='conversion_rate', 
+                     size='spend', color='campaign_type', hover_data=['roas'],
+                     labels={'ctr': 'Click-Through Rate (%)', 
+                            'conversion_rate': 'Conversion Rate (%)',
+                            'spend': 'Total Spend (₹)'},
+                     size_max=60)
+    fig.update_layout(height=400)
     st.plotly_chart(fig, use_container_width=True)
 
-# =============================================================================
-# PAGE: CAMPAIGN ANALYTICS
-# =============================================================================
-def page_campaign_analytics(data):
-    """Campaign Analytics Page"""
-    st.title("📈 Campaign Analytics")
-    
-    campaigns = data['campaigns']
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        selected_channels = st.multiselect(
-            "Select Channels",
-            options=campaigns['channel'].unique(),
-            default=campaigns['channel'].unique()
-        )
-    with col2:
-        selected_regions = st.multiselect(
-            "Select Regions",
-            options=campaigns['region'].unique(),
-            default=campaigns['region'].unique()
-        )
-    with col3:
-        date_range = st.date_input(
-            "Date Range",
-            value=(campaigns['date'].min(), campaigns['date'].max()),
-            min_value=campaigns['date'].min(),
-            max_value=campaigns['date'].max()
-        )
-    
-    # Filter data
-    filtered = campaigns[
-        (campaigns['channel'].isin(selected_channels)) &
-        (campaigns['region'].isin(selected_regions)) &
-        (campaigns['date'] >= pd.to_datetime(date_range[0])) &
-        (campaigns['date'] <= pd.to_datetime(date_range[1]))
-    ]
-    
-    st.markdown("---")
-    
-    # TODO: Grouped Bar Chart - Regional Performance by Quarter
-    st.subheader("📊 Regional Performance by Quarter")
-    
-    regional_quarterly = filtered.groupby(['region', 'quarter'])['revenue'].sum().reset_index()
-    
-    fig = px.bar(
-        regional_quarterly,
-        x='quarter',
-        y='revenue',
-        color='region',
-        barmode='group',
-        title='Revenue by Region and Quarter',
-        labels={'revenue': 'Revenue (₹)', 'quarter': 'Quarter', 'region': 'Region'}
-    )
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # TODO: Stacked Area Chart - Channel Contribution Over Time
-    st.subheader("📈 Channel Contribution Over Time")
-    
-    channel_time = filtered.groupby([pd.Grouper(key='date', freq='W'), 'channel'])['conversions'].sum().reset_index()
-    
-    fig = px.area(
-        channel_time,
-        x='date',
-        y='conversions',
-        color='channel',
-        title='Weekly Conversions by Channel (Stacked)',
-        labels={'date': 'Week', 'conversions': 'Conversions', 'channel': 'Channel'}
-    )
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # TODO: Calendar Heatmap
-    # Hint: Use plotly's heatmap with day of week vs week number
-
-# =============================================================================
-# PAGE: CUSTOMER INSIGHTS
-# =============================================================================
-def page_customer_insights(data):
-    """Customer Insights Page"""
-    st.title("👥 Customer Insights")
-    
-    customers = data['customers']
+# TAB 2: CUSTOMER ANALYTICS
+with tab2:
+    st.header("👥 Customer Analytics")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # TODO: Histogram - Age Distribution
-        st.subheader("📊 Age Distribution")
-        
-        bin_size = st.slider("Bin Size", min_value=2, max_value=10, value=5)
-        
-        fig = px.histogram(
-            customers,
-            x='age',
-            nbins=int((customers['age'].max() - customers['age'].min()) / bin_size),
-            title='Customer Age Distribution',
-            labels={'age': 'Age', 'count': 'Count'},
-            color_discrete_sequence=['#3366cc']
-        )
+        # Histogram - Age Distribution
+        st.subheader("Customer Age Distribution")
+        fig = px.histogram(data['customer'], x='age', nbins=30,
+                          color_discrete_sequence=['#636EFA'])
+        fig.update_layout(showlegend=False, height=400)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # TODO: Box Plot - LTV by Segment
-        st.subheader("📦 Lifetime Value by Segment")
-        
-        fig = px.box(
-            customers,
-            x='customer_segment',
-            y='lifetime_value',
-            color='customer_segment',
-            title='LTV Distribution by Customer Segment',
-            labels={'customer_segment': 'Segment', 'lifetime_value': 'Lifetime Value (₹)'}
-        )
+        # Pie Chart - Customer Segments
+        st.subheader("Customer Segment Distribution")
+        segment_dist = data['customer']['customer_segment'].value_counts().reset_index()
+        segment_dist.columns = ['segment', 'count']
+        fig = px.pie(segment_dist, values='count', names='segment',
+                    color_discrete_sequence=px.colors.qualitative.Set2,
+                    hole=0.4)
+        fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
     
-    st.markdown("---")
-    
-    # TODO: Scatter Plot - Income vs LTV
-    st.subheader("🔵 Income vs Lifetime Value")
-    
-    fig = px.scatter(
-        customers,
-        x='income',
-        y='lifetime_value',
-        color='customer_segment',
-        size='total_purchases',
-        hover_data=['age', 'tenure_months', 'satisfaction_score'],
-        title='Income vs Lifetime Value by Segment',
-        labels={'income': 'Income (₹)', 'lifetime_value': 'Lifetime Value (₹)'}
-    )
-    fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+    # Box Plot - Lifetime Value by Segment
+    st.subheader("Lifetime Value Distribution by Customer Segment")
+    fig = px.box(data['customer'], x='customer_segment', y='lifetime_value',
+                 color='customer_segment', color_discrete_sequence=px.colors.qualitative.Pastel)
+    fig.update_layout(showlegend=False, height=400)
     st.plotly_chart(fig, use_container_width=True)
     
-    # TODO: Violin Plot - Satisfaction by NPS Category
-
-# =============================================================================
-# PAGE: PRODUCT PERFORMANCE
-# =============================================================================
-def page_product_performance(data):
-    """Product Performance Page"""
-    st.title("📦 Product Performance")
+    st.markdown(f"""
+    <div class="insight-box">
+    <b>💡 Key Finding:</b> Premium customers have an average LTV of 
+    ₹{data['customer'][data['customer']['customer_segment']=='Premium']['lifetime_value'].mean():,.0f}, 
+    which is 2.5x higher than Basic customers.
+    </div>
+    """, unsafe_allow_html=True)
     
-    products = data['products']
-    
-    # TODO: Treemap - Product Hierarchy
-    st.subheader("🌳 Product Sales Hierarchy")
-    
-    fig = px.treemap(
-        products,
-        path=['category', 'subcategory', 'product_name'],
-        values='sales',
-        color='profit_margin',
-        color_continuous_scale='RdYlGn',
-        title='Product Sales Treemap (Size: Sales, Color: Profit Margin %)'
-    )
-    fig.update_layout(height=600)
+    # Violin Plot - Satisfaction Score by NPS Category
+    st.subheader("Satisfaction Score Distribution by NPS Category")
+    fig = px.violin(data['customer'], x='nps_category', y='satisfaction_score',
+                    color='nps_category', box=True,
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(showlegend=False, height=400)
     st.plotly_chart(fig, use_container_width=True)
     
-    # TODO: Sunburst Chart
-    st.subheader("☀️ Sales by Category & Region")
+    # Scatter Plot - Income vs Lifetime Value
+    st.subheader("Income vs Lifetime Value (colored by Customer Segment)")
+    fig = px.scatter(data['customer'], x='income', y='lifetime_value',
+                    color='customer_segment', size='total_purchases',
+                    hover_data=['age', 'tenure_months'],
+                    color_discrete_sequence=px.colors.qualitative.Bold)
+    fig.update_layout(height=500)
+    st.plotly_chart(fig, use_container_width=True)
     
-    category_region = products.groupby(['category', 'region'])['sales'].sum().reset_index()
-    
-    fig = px.sunburst(
-        category_region,
-        path=['category', 'region'],
-        values='sales',
-        title='Sales Distribution: Category → Region'
-    )
+    # Sunburst - Region > City Tier > Customer Segment
+    st.subheader("Customer Hierarchy: Region → City Tier → Segment")
+    customer_hierarchy = data['customer'].groupby(['region', 'city_tier', 'customer_segment']).size().reset_index(name='count')
+    fig = px.sunburst(customer_hierarchy, path=['region', 'city_tier', 'customer_segment'],
+                     values='count', color='count',
+                     color_continuous_scale='Blues')
+    fig.update_layout(height=500)
     st.plotly_chart(fig, use_container_width=True)
 
-# =============================================================================
-# PAGE: GEOGRAPHIC ANALYSIS
-# =============================================================================
-def page_geographic_analysis(data):
-    """Geographic Analysis Page"""
-    st.title("🗺️ Geographic Analysis")
-    
-    geo = data['geographic']
-    
-    # Metric selector
-    metric = st.selectbox(
-        "Select Metric to Display",
-        ['total_revenue', 'total_customers', 'market_penetration', 'yoy_growth', 'customer_satisfaction']
-    )
-    
-    # TODO: Bubble Map
-    st.subheader("📍 State-wise Performance")
-    
-    fig = px.scatter_geo(
-        geo,
-        lat='latitude',
-        lon='longitude',
-        size=metric,
-        color='region',
-        hover_name='state',
-        hover_data=['total_revenue', 'total_customers', 'store_count'],
-        title=f'State Performance - {metric.replace("_", " ").title()}',
-        scope='asia'
-    )
-    fig.update_geos(
-        center=dict(lat=20.5937, lon=78.9629),
-        projection_scale=4,
-        showland=True,
-        landcolor='lightgray'
-    )
-    fig.update_layout(height=600)
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Data table
-    st.subheader("📊 State-wise Metrics Table")
-    st.dataframe(
-        geo[['state', 'region', 'total_customers', 'total_revenue', 'market_penetration', 'yoy_growth', 'customer_satisfaction']].sort_values('total_revenue', ascending=False),
-        use_container_width=True
-    )
-
-# =============================================================================
-# PAGE: ATTRIBUTION & FUNNEL
-# =============================================================================
-def page_attribution_funnel(data):
-    """Attribution & Funnel Page"""
-    st.title("🎯 Attribution & Funnel Analysis")
-    
-    attribution = data['attribution']
-    funnel = data['funnel']
-    correlation = data['correlation']
+# TAB 3: PRODUCT INSIGHTS
+with tab3:
+    st.header("🛍️ Product Sales Insights")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # TODO: Donut Chart - Attribution Model
-        st.subheader("🍩 Channel Attribution")
-        
-        model = st.selectbox(
-            "Select Attribution Model",
-            ['first_touch', 'last_touch', 'linear', 'time_decay', 'position_based']
-        )
-        
-        fig = px.pie(
-            attribution,
-            values=model,
-            names='channel',
-            hole=0.4,
-            title=f'Channel Attribution - {model.replace("_", " ").title()}'
-        )
+        # Bar Chart - Category Performance
+        st.subheader("Sales by Product Category")
+        category_sales = data['product'].groupby('category')['sales'].sum().reset_index()
+        category_sales = category_sales.sort_values('sales', ascending=False)
+        fig = px.bar(category_sales, x='category', y='sales',
+                    color='sales', color_continuous_scale='Greens')
+        fig.update_layout(showlegend=False, height=400)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # TODO: Funnel Chart
-        st.subheader("🔻 Conversion Funnel")
+        # Bar Chart - Profit Margin by Category
+        st.subheader("Average Profit Margin by Category")
+        margin_data = data['product'].groupby('category')['profit_margin'].mean().reset_index()
+        fig = px.bar(margin_data, x='category', y='profit_margin',
+                    color='profit_margin', color_continuous_scale='RdYlGn')
+        fig.update_layout(showlegend=False, height=400)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Treemap - Category > Subcategory > Product
+    st.subheader("Product Sales Treemap")
+    product_tree = data['product'].groupby(['category', 'subcategory', 'product_name'])['sales'].sum().reset_index()
+    product_tree = product_tree.nlargest(100, 'sales')  # Top 100 for performance
+    fig = px.treemap(product_tree, path=['category', 'subcategory', 'product_name'],
+                    values='sales', color='sales',
+                    color_continuous_scale='Viridis')
+    fig.update_layout(height=500)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Quarterly Sales Trend
+    st.subheader("Quarterly Sales Trend by Category")
+    quarterly_sales = data['product'].groupby(['quarter', 'category'])['sales'].sum().reset_index()
+    fig = px.line(quarterly_sales, x='quarter', y='sales', color='category',
+                 markers=True, color_discrete_sequence=px.colors.qualitative.Set2)
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Regional Performance
+    st.subheader("Regional Product Performance")
+    regional_sales = data['product'].groupby(['region', 'category'])['sales'].sum().reset_index()
+    fig = px.bar(regional_sales, x='region', y='sales', color='category',
+                barmode='group', color_discrete_sequence=px.colors.qualitative.Pastel)
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
+
+# TAB 4: ML MODELS
+with tab4:
+    st.header("🤖 Machine Learning Model Performance")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Confusion Matrix
+        st.subheader("Lead Scoring: Confusion Matrix")
+        from sklearn.metrics import confusion_matrix
+        cm = confusion_matrix(data['lead_scoring']['actual_converted'], 
+                            data['lead_scoring']['predicted_class'])
         
-        fig = go.Figure(go.Funnel(
-            y=funnel['stage'],
-            x=funnel['visitors'],
-            textinfo="value+percent initial",
-            marker=dict(color=['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3'])
+        fig = go.Figure(data=go.Heatmap(
+            z=cm,
+            x=['Predicted 0', 'Predicted 1'],
+            y=['Actual 0', 'Actual 1'],
+            colorscale='Blues',
+            text=cm,
+            texttemplate='%{text}',
+            textfont={"size": 20}
         ))
-        fig.update_layout(title='Marketing Funnel')
-        st.plotly_chart(fig, use_container_width=True)
-    
-    st.markdown("---")
-    
-    # TODO: Correlation Heatmap
-    st.subheader("🔥 Metric Correlation Heatmap")
-    
-    fig = px.imshow(
-        correlation,
-        text_auto='.2f',
-        aspect='auto',
-        color_continuous_scale='RdBu_r',
-        title='Correlation Between Marketing Metrics'
-    )
-    fig.update_layout(height=600)
-    st.plotly_chart(fig, use_container_width=True)
-
-# =============================================================================
-# PAGE: ML MODEL EVALUATION
-# =============================================================================
-def page_ml_evaluation(data):
-    """ML Model Evaluation Page"""
-    st.title("🤖 ML Model Evaluation")
-    st.markdown("Lead Scoring Model Performance Analysis")
-    
-    leads = data['leads']
-    feature_imp = data['feature_importance']
-    learning = data['learning_curve']
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # TODO: Confusion Matrix
-        st.subheader("📊 Confusion Matrix")
-        
-        threshold = st.slider("Classification Threshold", 0.0, 1.0, 0.5, 0.05)
-        
-        y_true = leads['actual_converted']
-        y_pred = (leads['predicted_probability'] >= threshold).astype(int)
-        
-        cm = confusion_matrix(y_true, y_pred)
-        
-        fig = px.imshow(
-            cm,
-            labels=dict(x="Predicted", y="Actual", color="Count"),
-            x=['Not Converted', 'Converted'],
-            y=['Not Converted', 'Converted'],
-            text_auto=True,
-            color_continuous_scale='Blues',
-            title=f'Confusion Matrix (Threshold: {threshold})'
-        )
+        fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
         
-        # Metrics
-        tn, fp, fn, tp = cm.ravel()
-        accuracy = (tp + tn) / (tp + tn + fp + fn)
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-        
-        st.write(f"**Accuracy:** {accuracy:.3f} | **Precision:** {precision:.3f} | **Recall:** {recall:.3f}")
+        accuracy = (cm[0,0] + cm[1,1]) / cm.sum()
+        st.info(f"**Model Accuracy:** {accuracy*100:.2f}%")
     
     with col2:
-        # TODO: ROC Curve
-        st.subheader("📈 ROC Curve")
-        
-        fpr, tpr, thresholds = roc_curve(leads['actual_converted'], leads['predicted_probability'])
+        # ROC Curve
+        st.subheader("ROC Curve")
+        from sklearn.metrics import roc_curve, auc
+        fpr, tpr, _ = roc_curve(data['lead_scoring']['actual_converted'], 
+                               data['lead_scoring']['predicted_probability'])
         roc_auc = auc(fpr, tpr)
         
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name=f'ROC (AUC = {roc_auc:.3f})'))
-        fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random', line=dict(dash='dash')))
-        fig.update_layout(
-            title='ROC Curve',
-            xaxis_title='False Positive Rate',
-            yaxis_title='True Positive Rate',
-            legend=dict(x=0.6, y=0.1)
-        )
+        fig.add_trace(go.Scatter(x=fpr, y=tpr, name=f'ROC (AUC = {roc_auc:.3f})',
+                                line=dict(color='#1f77b4', width=3)))
+        fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], name='Random',
+                                line=dict(color='gray', dash='dash')))
+        fig.update_layout(xaxis_title='False Positive Rate',
+                         yaxis_title='True Positive Rate',
+                         height=400)
         st.plotly_chart(fig, use_container_width=True)
+        
+        st.success(f"**AUC Score:** {roc_auc:.3f} - Good predictive performance!")
     
-    st.markdown("---")
+    # Feature Importance
+    st.subheader("Feature Importance Analysis")
+    feature_df = data['feature_importance'].sort_values('importance', ascending=False)
+    fig = px.bar(feature_df, x='importance', y='feature', orientation='h',
+                color='importance', color_continuous_scale='Reds',
+                error_x='importance_std')
+    fig.update_layout(yaxis={'categoryorder':'total ascending'}, height=400)
+    st.plotly_chart(fig, use_container_width=True)
     
-    col3, col4 = st.columns(2)
+    st.markdown(f"""
+    <div class="insight-box">
+    <b>🎯 Top Predictors:</b> {feature_df.iloc[0]['feature']} and {feature_df.iloc[1]['feature']} 
+    are the strongest indicators of lead conversion.
+    </div>
+    """, unsafe_allow_html=True)
     
-    with col3:
-        # TODO: Feature Importance
-        st.subheader("🎯 Feature Importance")
-        
-        feature_imp_sorted = feature_imp.sort_values('importance', ascending=True)
-        
-        fig = px.bar(
-            feature_imp_sorted,
-            x='importance',
-            y='feature',
-            orientation='h',
-            error_x='importance_std',
-            title='Feature Importance (with std dev)',
-            labels={'importance': 'Importance Score', 'feature': 'Feature'}
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col4:
-        # TODO: Learning Curve
-        st.subheader("📚 Learning Curve")
-        
-        fig = go.Figure()
-        
-        # Training score
-        fig.add_trace(go.Scatter(
-            x=learning['training_size'],
-            y=learning['train_score'],
-            mode='lines+markers',
-            name='Training Score',
-            line=dict(color='blue')
-        ))
-        
-        # Validation score
-        fig.add_trace(go.Scatter(
-            x=learning['training_size'],
-            y=learning['validation_score'],
-            mode='lines+markers',
-            name='Validation Score',
-            line=dict(color='green')
-        ))
-        
-        fig.update_layout(
-            title='Learning Curve',
-            xaxis_title='Training Set Size',
-            yaxis_title='Score',
-            yaxis=dict(range=[0.4, 1.0])
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    # Learning Curve
+    st.subheader("Model Learning Curve")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=data['learning_curve']['training_size'], 
+                            y=data['learning_curve']['train_score'],
+                            name='Training Score', mode='lines+markers',
+                            line=dict(color='#1f77b4', width=3)))
+    fig.add_trace(go.Scatter(x=data['learning_curve']['training_size'], 
+                            y=data['learning_curve']['validation_score'],
+                            name='Validation Score', mode='lines+markers',
+                            line=dict(color='#ff7f0e', width=3)))
+    fig.update_layout(xaxis_title='Training Size',
+                     yaxis_title='Score',
+                     height=400, hovermode='x unified')
+    st.plotly_chart(fig, use_container_width=True)
 
-# =============================================================================
-# MAIN APP
-# =============================================================================
-def main():
-    """Main application"""
+# TAB 5: GEOGRAPHIC ANALYSIS
+with tab5:
+    st.header("🗺️ Geographic Performance Analysis")
     
-    # Load data
-    data = load_data()
+    # Choropleth Map
+    st.subheader("Revenue by State (Choropleth Map)")
+    fig = px.scatter_geo(data['geographic'],
+                        lat='latitude', lon='longitude',
+                        size='total_revenue',
+                        color='revenue_per_customer',
+                        hover_name='state',
+                        hover_data=['total_customers', 'store_count', 'customer_satisfaction'],
+                        color_continuous_scale='Viridis',
+                        size_max=50)
+    fig.update_geos(scope='asia', showcountries=True)
+    fig.update_layout(height=500)
+    st.plotly_chart(fig, use_container_width=True)
     
-    if data is None:
-        st.stop()
+    col1, col2 = st.columns(2)
     
-    # Sidebar navigation
-    page = sidebar()
+    with col1:
+        # Top States by Revenue
+        st.subheader("Top 10 States by Revenue")
+        top_states = data['geographic'].nlargest(10, 'total_revenue')
+        fig = px.bar(top_states, x='state', y='total_revenue',
+                    color='total_revenue', color_continuous_scale='Blues')
+        fig.update_layout(showlegend=False, height=400)
+        st.plotly_chart(fig, use_container_width=True)
     
-    # Route to pages
-    if page == "🏠 Executive Overview":
-        page_executive_overview(data)
-    elif page == "📈 Campaign Analytics":
-        page_campaign_analytics(data)
-    elif page == "👥 Customer Insights":
-        page_customer_insights(data)
-    elif page == "📦 Product Performance":
-        page_product_performance(data)
-    elif page == "🗺️ Geographic Analysis":
-        page_geographic_analysis(data)
-    elif page == "🎯 Attribution & Funnel":
-        page_attribution_funnel(data)
-    elif page == "🤖 ML Model Evaluation":
-        page_ml_evaluation(data)
+    with col2:
+        # YoY Growth by Region
+        st.subheader("Year-over-Year Growth by Region")
+        regional_growth = data['geographic'].groupby('region')['yoy_growth'].mean().reset_index()
+        fig = px.bar(regional_growth, x='region', y='yoy_growth',
+                    color='yoy_growth', color_continuous_scale='RdYlGn')
+        fig.update_layout(showlegend=False, height=400)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Bubble Map - Store Count vs Satisfaction
+    st.subheader("Store Distribution & Customer Satisfaction")
+    fig = px.scatter_geo(data['geographic'],
+                        lat='latitude', lon='longitude',
+                        size='store_count',
+                        color='customer_satisfaction',
+                        hover_name='state',
+                        hover_data=['total_customers', 'market_penetration'],
+                        color_continuous_scale='RdYlGn',
+                        size_max=40)
+    fig.update_geos(scope='asia')
+    fig.update_layout(height=500)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Market Penetration Analysis
+    st.subheader("Market Penetration vs Customer Satisfaction")
+    fig = px.scatter(data['geographic'], x='market_penetration', y='customer_satisfaction',
+                    size='total_customers', color='region', hover_name='state',
+                    labels={'market_penetration': 'Market Penetration (%)',
+                           'customer_satisfaction': 'Customer Satisfaction'},
+                    color_discrete_sequence=px.colors.qualitative.Set2)
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
 
-if __name__ == "__main__":
-    main()
+# TAB 6: ATTRIBUTION & FUNNEL
+with tab6:
+    st.header("🔄 Attribution Models & Conversion Funnel")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Multi-Touch Attribution Models
+        st.subheader("Channel Attribution Comparison")
+        attribution_melted = data['attribution'].melt(id_vars=['channel'], 
+                                                      var_name='model', 
+                                                      value_name='conversions')
+        fig = px.bar(attribution_melted, x='channel', y='conversions', 
+                    color='model', barmode='group',
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Attribution Donut Chart - Last Touch Model
+        st.subheader("Last Touch Attribution")
+        fig = px.pie(data['attribution'], values='last_touch', names='channel',
+                    hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Conversion Funnel
+    st.subheader("Marketing Conversion Funnel")
+    fig = go.Figure(go.Funnel(
+        y=data['funnel']['stage'],
+        x=data['funnel']['visitors'],
+        textposition="inside",
+        textinfo="value+percent initial",
+        marker={"color": ["#636EFA", "#EF553B", "#00CC96", "#AB63FA", "#FFA15A", "#19D3F3"]}
+    ))
+    fig.update_layout(height=500)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Funnel Conversion Rates
+    col1, col2, col3 = st.columns(3)
+    for idx, row in data['funnel'].iterrows():
+        if idx < 3:
+            with col1:
+                st.metric(row['stage'], f"{row['visitors']:,}", 
+                         f"{row['conversion_rate']:.1f}%" if pd.notna(row['conversion_rate']) else "")
+        elif idx < 6:
+            with col2:
+                st.metric(row['stage'], f"{row['visitors']:,}", 
+                         f"{row['conversion_rate']:.1f}%" if pd.notna(row['conversion_rate']) else "")
+    
+    # Customer Journey Analysis
+    st.subheader("Customer Journey Paths")
+    journey_data = data['journey'].copy()
+    journey_data['path'] = (journey_data['touchpoint_1'] + ' → ' + 
+                           journey_data['touchpoint_2'] + ' → ' + 
+                           journey_data['touchpoint_3'] + ' → ' + 
+                           journey_data['touchpoint_4'])
+    journey_data = journey_data.sort_values('customer_count', ascending=False)
+    
+    fig = px.bar(journey_data, x='customer_count', y='path', orientation='h',
+                color='customer_count', color_continuous_scale='Teal')
+    fig.update_layout(yaxis={'categoryorder':'total ascending'}, height=400)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Correlation Heatmap
+    st.subheader("Marketing Metrics Correlation Matrix")
+    corr_matrix = data['correlation'].set_index(data['correlation'].columns[0])
+    fig = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.index,
+        colorscale='RdBu',
+        zmid=0,
+        text=np.round(corr_matrix.values, 2),
+        texttemplate='%{text}',
+        textfont={"size": 10}
+    ))
+    fig.update_layout(height=500)
+    st.plotly_chart(fig, use_container_width=True)
+
+# Footer
+st.markdown("---")
+st.markdown("""
+<div style='text-align: center; color: #666; margin-top: 20px;'>
+    <p><b>NovaMart Marketing Analytics Dashboard</b> | Built with Streamlit & Plotly</p>
+    <p>Masters of AI in Business - Data Visualization Assignment</p>
+    <p style='font-size:15px; margin-top:10px;'>
+        Crafted with ❤️ by 
+        <a href="https://github.com/mercydeez" target="_blank" style="color:#1f77b4; text-decoration:none;">
+            <b>Atharva Soundankar</b>
+        </a>
+    </p>
+</div>
+""", unsafe_allow_html=True)
