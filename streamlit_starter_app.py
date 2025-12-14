@@ -603,9 +603,9 @@ st.markdown("""
     <p><b>NovaMart Marketing Analytics Dashboard</b> | Built with Streamlit & Plotly</p>
     <p>Masters of AI in Business - Data Visualization Assignment</p>
     <p style='font-size:15px; margin-top:10px;'>
-        Crafted with ❤️ by 
+        Created by 
         <a href="https://github.com/mercydeez" target="_blank" style="color:#1f77b4; text-decoration:none;">
-            <b>Atharva Soundankar</b>
+            <b>Aditya Chitale</b>
         </a>
     </p>
 </div>
