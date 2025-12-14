@@ -133,7 +133,7 @@ if selected_channel != 'All':
 
 # Main header
 st.markdown('<p class="main-header">📊 NovaMart Marketing Analytics Dashboard</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Comprehensive Marketing Performance & Customer Intelligence Platform</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Comprehensive Marketing Performance & Customer Insights</p>', unsafe_allow_html=True)
 
 # Key Metrics
 col1, col2, col3, col4, col5 = st.columns(5)
