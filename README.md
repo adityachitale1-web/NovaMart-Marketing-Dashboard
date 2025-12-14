@@ -59,7 +59,7 @@ The dashboard is organized into 6 specialized analytical modules:
 
 ```bash
 # Clone repository
-git clone https://github.com/mercydeez/novamart-marketing-dashboard.git
+git clone https://github.com/adityachitale1-web/NovaMart-Marketing-Dashboard
 cd novamart-marketing-dashboard
 
 # Install dependencies
